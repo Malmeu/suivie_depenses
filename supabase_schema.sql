@@ -52,3 +52,20 @@ CREATE POLICY "Allow anon delete" ON bills FOR DELETE USING (true);
 
 CREATE POLICY "Allow anon select" ON savings FOR SELECT USING (true);
 CREATE POLICY "Allow anon update" ON savings FOR UPDATE USING (true);
+
+-- Subscriptions Table
+CREATE TABLE IF NOT EXISTS subscriptions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+  title TEXT NOT NULL,
+  amount NUMERIC NOT NULL,
+  category TEXT NOT NULL,
+  billing_day INTEGER NOT NULL CHECK (billing_day >= 1 AND billing_day <= 31),
+  active BOOLEAN DEFAULT true
+);
+
+ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow anon select" ON subscriptions FOR SELECT USING (true);
+CREATE POLICY "Allow anon insert" ON subscriptions FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow anon update" ON subscriptions FOR UPDATE USING (true);
+CREATE POLICY "Allow anon delete" ON subscriptions FOR DELETE USING (true);

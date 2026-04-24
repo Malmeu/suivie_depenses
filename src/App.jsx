@@ -28,7 +28,11 @@ import {
   User,
   LogOut,
   Trash2,
-  AlertCircle
+  AlertCircle,
+  PieChart as PieIcon,
+  BarChart3,
+  RefreshCw,
+  Users
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -39,15 +43,32 @@ import {
   endOfMonth, 
   isWithinInterval, 
   eachMonthOfInterval, 
+  eachDayOfInterval,
   subMonths,
   getMonth,
   getYear,
   isToday,
   isBefore,
-  addDays
+  addDays,
+  startOfToday,
+  getDate
 } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { supabase } from './supabaseClient';
+import { 
+  PieChart, 
+  Pie, 
+  Cell, 
+  ResponsiveContainer, 
+  AreaChart, 
+  Area, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip,
+  BarChart,
+  Bar
+} from 'recharts';
 
 // --- Constants ---
 const CATEGORIES = [
@@ -144,7 +165,7 @@ function LoginPage({ onLogin }) {
 function BottomNav({ activeTab, setActiveTab, onAddClick }) {
   const tabs = [
     { id: 'home', icon: Home, label: 'Accueil' },
-    { id: 'history', icon: History, label: 'Historique' },
+    { id: 'stats', icon: PieIcon, label: 'Analyses' },
     { id: 'add', icon: Plus, label: '', isFab: true },
     { id: 'savings', icon: PiggyBank, label: 'Tirelire' },
     { id: 'reminders', icon: Bell, label: 'Rappels' },
@@ -256,7 +277,7 @@ const MonthSelector = ({ selected, onSelect }) => {
       })}
     </div>
   );
-}
+};
 
 const ExpenseItem = ({ item, onDelete }) => {
   const cat = CATEGORIES.find(c => c.id === item.category) || CATEGORIES[5];
@@ -305,6 +326,156 @@ const ExpenseItem = ({ item, onDelete }) => {
         </button>
       </div>
     </motion.div>
+  );
+};
+
+const StatisticsView = ({ expenses, subscriptions, onAddSub, onDeleteSub, selectedMonth }) => {
+  const [isAddingSub, setIsAddingSub] = useState(false);
+  const [newSub, setNewSub] = useState({ title: '', amount: '', category: 'bills', billing_day: 1 });
+
+  const filtered = expenses.filter(exp => {
+    const expDate = parseISO(exp.date);
+    return getMonth(expDate) === getMonth(selectedMonth) && getYear(expDate) === getYear(selectedMonth);
+  });
+
+  const categoryData = useMemo(() => {
+    const data = CATEGORIES.map(cat => {
+      const total = filtered
+        .filter(exp => exp.category === cat.id && exp.type === 'expense')
+        .reduce((sum, exp) => sum + exp.amount, 0);
+      return { name: cat.name, value: total, color: cat.color };
+    }).filter(d => d.value > 0);
+    return data;
+  }, [filtered]);
+
+  const dailyData = useMemo(() => {
+    const days = eachDayOfInterval({
+      start: startOfMonth(selectedMonth),
+      end: endOfMonth(selectedMonth)
+    });
+    return days.map(day => {
+      const total = filtered
+        .filter(exp => isSameDay(parseISO(exp.date), day) && exp.type === 'expense')
+        .reduce((sum, exp) => sum + exp.amount, 0);
+      return { date: format(day, 'd'), amount: total };
+    });
+  }, [filtered, selectedMonth]);
+
+  return (
+    <div className="animate-slide-up" style={{ padding: '0 20px', paddingBottom: '100px' }}>
+      <h2 style={{ fontSize: '24px', marginBottom: '20px' }}>Analyses & Abonnements</h2>
+      
+      <div className="card" style={{ padding: '20px' }}>
+        <h3 style={{ fontSize: '16px', marginBottom: '20px' }}>Répartition par Catégorie</h3>
+        {categoryData.length > 0 ? (
+          <div style={{ height: '250px' }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={categoryData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={80}
+                  paddingAngle={5}
+                  dataKey="value"
+                >
+                  {categoryData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip 
+                  formatter={(val) => `${val.toLocaleString()} DA`}
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: 'var(--shadow-md)' }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        ) : (
+          <div style={{ height: '250px', display: 'flex', justifyContent: 'center', alignItems: 'center', color: 'var(--text-secondary)' }}>
+            <p>Pas encore de dépenses ce mois-ci</p>
+          </div>
+        )}
+      </div>
+
+      {/* Subscriptions Section */}
+      <div className="card" style={{ padding: '20px', marginTop: '20px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <h3 style={{ fontSize: '16px' }}>Abonnements (Récurrents)</h3>
+          <button onClick={() => setIsAddingSub(true)} style={{ background: 'var(--pastel-blue)', color: 'var(--accent-blue)', padding: '6px 12px', borderRadius: '10px', fontSize: '12px', fontWeight: 700 }}>+ Ajouter</button>
+        </div>
+
+        <AnimatePresence>
+          {isAddingSub && (
+            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} style={{ overflow: 'hidden' }}>
+              <div style={{ background: '#F8F5F2', padding: '15px', borderRadius: '15px', marginBottom: '20px' }}>
+                <input 
+                  type="text" placeholder="Nom (ex: Netflix)" 
+                  value={newSub.title} onChange={e => setNewSub({...newSub, title: e.target.value})}
+                  style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid #E5E5EA', marginBottom: '10px' }}
+                />
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <input 
+                    type="number" placeholder="Montant DA" 
+                    value={newSub.amount} onChange={e => setNewSub({...newSub, amount: e.target.value})}
+                    style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid #E5E5EA' }}
+                  />
+                  <input 
+                    type="number" placeholder="Jour (1-31)" 
+                    value={newSub.billing_day} onChange={e => setNewSub({...newSub, billing_day: e.target.value})}
+                    style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid #E5E5EA' }}
+                  />
+                </div>
+                <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
+                  <button onClick={() => { onAddSub(newSub); setIsAddingSub(false); }} className="btn-primary" style={{ flex: 1, padding: '10px' }}>Enregistrer</button>
+                  <button onClick={() => setIsAddingSub(false)} style={{ flex: 1, padding: '10px', color: 'var(--text-secondary)' }}>Annuler</button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {subscriptions.map(sub => (
+          <div key={sub.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 0', borderBottom: '1px solid var(--sep-color)' }}>
+            <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'var(--pastel-blue)', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+              <RefreshCw size={18} color="var(--accent-blue)" />
+            </div>
+            <div style={{ flex: 1 }}>
+              <p style={{ fontWeight: 600, fontSize: '14px' }}>{sub.title}</p>
+              <p style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Prélèvement le {sub.billing_day} de chaque mois</p>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <p style={{ fontWeight: 700, fontSize: '14px' }}>{sub.amount.toLocaleString()} DA</p>
+              <button onClick={() => onDeleteSub(sub.id)} style={{ color: 'var(--accent-red)', marginLeft: '10px' }}><Trash2 size={14} /></button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="card" style={{ padding: '20px', marginTop: '20px' }}>
+        <h3 style={{ fontSize: '16px', marginBottom: '20px' }}>Évolution Journalière</h3>
+        <div style={{ height: '200px' }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={dailyData}>
+              <defs>
+                <linearGradient id="colorAmount" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="var(--accent-blue)" stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor="var(--accent-blue)" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E0DA" />
+              <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10 }} />
+              <YAxis hide />
+              <Tooltip 
+                formatter={(val) => `${val.toLocaleString()} DA`}
+                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: 'var(--shadow-md)' }}
+              />
+              <Area type="monotone" dataKey="amount" stroke="var(--accent-blue)" strokeWidth={3} fillOpacity={1} fill="url(#colorAmount)" />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+    </div>
   );
 };
 
@@ -606,6 +777,7 @@ export default function App() {
   
   const [expenses, setExpenses] = useState([]);
   const [bills, setBills] = useState([]);
+  const [subscriptions, setSubscriptions] = useState([]);
   const [savings, setSavings] = useState(INITIAL_SAVINGS);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -633,19 +805,49 @@ export default function App() {
     try {
       const { data: expData } = await supabase.from('expenses').select('*').order('date', { ascending: false });
       const { data: billData } = await supabase.from('bills').select('*').order('due_date', { ascending: true });
+      const { data: subData } = await supabase.from('subscriptions').select('*').order('billing_day', { ascending: true });
       const { data: saveData } = await supabase.from('savings').select('*').single();
 
       setExpenses(expData || []);
       setBills(billData || []);
-      if (saveData) {
-        setSavings(saveData);
-        checkDueBills(billData || []);
-      }
+      setSubscriptions(subData || []);
+      if (saveData) setSavings(saveData);
+      
+      checkDueBills(billData || []);
+      if (subData) processSubscriptions(subData, expData || []);
 
     } catch (e) {
       console.error(e);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const processSubscriptions = async (subs, existingExpenses) => {
+    const today = new Date();
+    const currentDay = getDate(today);
+    
+    for (const sub of subs) {
+      if (sub.active && sub.billing_day <= currentDay) {
+        // Check if already processed for this month
+        const alreadyExists = existingExpenses.some(exp => 
+          exp.title.includes(sub.title) && 
+          getMonth(parseISO(exp.date)) === getMonth(today) &&
+          getYear(parseISO(exp.date)) === getYear(today)
+        );
+
+        if (!alreadyExists) {
+          const newExp = {
+            title: `Abonnement: ${sub.title}`,
+            amount: sub.amount,
+            category: sub.category,
+            date: today.toISOString(),
+            type: 'expense'
+          };
+          const { data } = await supabase.from('expenses').insert([newExp]).select();
+          if (data) setExpenses(prev => [data[0], ...prev]);
+        }
+      }
     }
   };
 
@@ -655,37 +857,21 @@ export default function App() {
     if (dueSoon.length > 0) {
       const msgs = dueSoon.map(b => `${b.title} (${b.amount.toLocaleString()} DA)`);
       setNotifications(msgs);
-      
-      // Browser Notification if supported and permitted
       if ("Notification" in window && Notification.permission === "granted") {
-        new Notification("Rappel de facture", {
-          body: `Vous avez ${dueSoon.length} facture(s) en attente today !`,
-          icon: "/favicon.svg"
-        });
+        new Notification("Rappel de facture", { body: `Vous avez ${dueSoon.length} facture(s) en attente today !`, icon: "/favicon.svg" });
       } else if ("Notification" in window && Notification.permission === "default") {
         Notification.requestPermission();
       }
     }
   };
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-  };
+  const handleLogout = async () => await supabase.auth.signOut();
 
   const addExpense = async (payload) => {
     const { isReminder, dueDate, ...newExp } = payload;
-
     if (isReminder) {
-      const { data, error } = await supabase.from('bills').insert([{
-        title: newExp.title,
-        amount: newExp.amount,
-        due_date: dueDate,
-        paid: false
-      }]).select();
-      if (!error && data) {
-        setBills([...bills, data[0]]);
-        alert("Rappel planifié !");
-      }
+      const { data, error } = await supabase.from('bills').insert([{ title: newExp.title, amount: newExp.amount, due_date: dueDate, paid: false }]).select();
+      if (!error && data) { setBills([...bills, data[0]]); alert("Rappel planifié !"); }
     } else {
       const { data, error } = await supabase.from('expenses').insert([newExp]).select();
       if (!error && data) setExpenses([data[0], ...expenses]);
@@ -694,52 +880,42 @@ export default function App() {
 
   const deleteExpense = async (id) => {
     const { error } = await supabase.from('expenses').delete().eq('id', id);
-    if (!error) {
-      setExpenses(expenses.filter(e => e.id !== id));
-    }
+    if (!error) setExpenses(expenses.filter(e => e.id !== id));
   };
 
   const toggleBill = async (id) => {
     const bill = bills.find(b => b.id === id);
     if (!bill) return;
-    
     const isPaying = !bill.paid;
     const { data, error } = await supabase.from('bills').update({ paid: isPaying }).eq('id', id).select();
-    
     if (!error && data) {
       setBills(bills.map(b => b.id === id ? data[0] : b));
-      
-      // If paying, add as expense
       if (isPaying) {
-        const newExp = {
-          title: `Facture: ${bill.title}`,
-          amount: bill.amount,
-          category: 'bills',
-          date: new Date().toISOString(),
-          type: 'expense'
-        };
+        const newExp = { title: `Facture: ${bill.title}`, amount: bill.amount, category: 'bills', date: new Date().toISOString(), type: 'expense' };
         const { data: expData } = await supabase.from('expenses').insert([newExp]).select();
         if (expData) setExpenses([expData[0], ...expenses]);
       }
     }
   };
 
+  const addSubscription = async (sub) => {
+    const { data, error } = await supabase.from('subscriptions').insert([sub]).select();
+    if (!error && data) setSubscriptions([...subscriptions, data[0]]);
+  };
+
+  const deleteSubscription = async (id) => {
+    const { error } = await supabase.from('subscriptions').delete().eq('id', id);
+    if (!error) setSubscriptions(subscriptions.filter(s => s.id !== id));
+  };
+
   const updateSavings = async (newSavings, isDeposit) => {
     const { data, error } = await supabase.from('savings').update(newSavings).eq('id', 1).select();
     if (!error && data) {
       setSavings(data[0]);
-      
-      // If it was a deposit, it's an expense
       if (isDeposit !== undefined) {
         const diff = Math.abs(newSavings.current - savings.current);
         if (diff > 0) {
-          const newExp = {
-            title: isDeposit ? "Dépôt Tirelire" : "Retrait Tirelire",
-            amount: diff,
-            category: 'other',
-            date: new Date().toISOString(),
-            type: isDeposit ? 'expense' : 'income'
-          };
+          const newExp = { title: isDeposit ? "Dépôt Tirelire" : "Retrait Tirelire", amount: diff, category: 'other', date: new Date().toISOString(), type: isDeposit ? 'expense' : 'income' };
           const { data: expData } = await supabase.from('expenses').insert([newExp]).select();
           if (expData) setExpenses([expData[0], ...expenses]);
         }
@@ -764,22 +940,13 @@ export default function App() {
   const stats = useMemo(() => {
     const income = filteredExpenses.filter(e => e.type === 'income').reduce((a, b) => a + b.amount, 0);
     const expense = filteredExpenses.filter(e => e.type === 'expense').reduce((a, b) => a + b.amount, 0);
-    // Solde = Income - Expense (Savings are already counted as expenses via updateSavings)
     return { income, expense, total: income - expense };
   }, [filteredExpenses]);
 
-  if (!session) {
-    return <LoginPage />;
-  }
+  if (!session) return <LoginPage />;
 
   const renderContent = () => {
-    if (loading) {
-      return (
-        <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-          <Loader2 className="animate-spin" size={48} color="var(--accent-blue)" />
-        </div>
-      );
-    }
+    if (loading) return <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}><Loader2 className="animate-spin" size={48} color="var(--accent-blue)" /></div>;
 
     switch (activeTab) {
       case 'home':
@@ -788,18 +955,13 @@ export default function App() {
             {notifications.length > 0 && (
               <div className="glass" style={{ background: 'rgba(216, 154, 91, 0.1)', padding: '20px', borderRadius: '20px', marginBottom: '24px', border: '1px solid var(--accent-blue)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '10px' }}>
-                  <div style={{ background: 'var(--accent-blue)', color: 'white', padding: '6px', borderRadius: '50%' }}>
-                    <Bell size={18} />
-                  </div>
+                  <div style={{ background: 'var(--accent-blue)', color: 'white', padding: '6px', borderRadius: '50%' }}><Bell size={18} /></div>
                   <h4 style={{ fontWeight: 700, fontSize: '16px' }}>Factures à régler</h4>
                 </div>
                 {notifications.map((n, i) => (
                   <div key={i} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '14px' }}>
                     <p>• {n}</p>
-                    <button 
-                      onClick={() => setActiveTab('reminders')}
-                      style={{ background: 'transparent', color: 'var(--accent-blue)', fontWeight: 600, fontSize: '12px' }}
-                    >Voir</button>
+                    <button onClick={() => setActiveTab('reminders')} style={{ background: 'transparent', color: 'var(--accent-blue)', fontWeight: 600, fontSize: '12px' }}>Voir</button>
                   </div>
                 ))}
                 <button onClick={() => setNotifications([])} style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '10px' }}>Masquer tout</button>
@@ -807,12 +969,10 @@ export default function App() {
             )}
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <div>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Balance Mensuelle</p>
-                <h2 style={{ fontSize: '24px' }}>Mon Foyer</h2>
-              </div>
-              <div onClick={handleLogout} style={{ width: '45px', height: '45px', borderRadius: '50%', background: 'var(--pastel-blue)', display: 'flex', justifyContent: 'center', alignItems: 'center', cursor: 'pointer' }}>
-                <LogOut size={20} color="var(--accent-blue)" />
+              <div><p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Balance Mensuelle</p><h2 style={{ fontSize: '24px' }}>Mon Foyer</h2></div>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <div style={{ width: '45px', height: '45px', borderRadius: '50%', background: 'var(--pastel-blue)', display: 'flex', justifyContent: 'center', alignItems: 'center' }}><Users size={20} color="var(--accent-blue)" /></div>
+                <div onClick={handleLogout} style={{ width: '45px', height: '45px', borderRadius: '50%', background: '#FFEBEE', display: 'flex', justifyContent: 'center', alignItems: 'center', cursor: 'pointer' }}><LogOut size={20} color="#FF3B30" /></div>
               </div>
             </div>
 
@@ -825,22 +985,15 @@ export default function App() {
             </div>
 
             {filteredExpenses.slice(0, 5).map(exp => <ExpenseItem key={exp.id} item={exp} onDelete={deleteExpense} />)}
-            {filteredExpenses.length === 0 && (
-              <div style={{ textAlign: 'center', padding: '40px 0', opacity: 0.5 }}>
-                <Search size={48} style={{ marginBottom: '10px' }} />
-                <p>Aucune dépense ce mois-ci</p>
-              </div>
-            )}
+            {filteredExpenses.length === 0 && <div style={{ textAlign: 'center', padding: '40px 0', opacity: 0.5 }}><Search size={48} style={{ marginBottom: '10px' }} /><p>Aucune dépense ce mois-ci</p></div>}
           </div>
         );
       
       case 'history':
-        return (
-          <div className="animate-slide-up" style={{ padding: '0 20px' }}>
-            <h2 style={{ fontSize: '24px', marginBottom: '20px' }}>Tout l'historique</h2>
-            {expenses.map(exp => <ExpenseItem key={exp.id} item={exp} onDelete={deleteExpense} />)}
-          </div>
-        );
+        return <div className="animate-slide-up" style={{ padding: '0 20px' }}><h2 style={{ fontSize: '24px', marginBottom: '20px' }}>Tout l'historique</h2>{expenses.map(exp => <ExpenseItem key={exp.id} item={exp} onDelete={deleteExpense} />)}</div>;
+
+      case 'stats':
+        return <StatisticsView expenses={expenses} subscriptions={subscriptions} onAddSub={addSubscription} onDeleteSub={deleteSubscription} selectedMonth={selectedMonth} />;
 
       case 'savings':
         return <TirelireView savings={savings} onUpdate={updateSavings} />;
@@ -854,10 +1007,7 @@ export default function App() {
               <h3 style={{ fontSize: '16px', color: 'var(--text-secondary)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '1px' }}>À venir</h3>
               {bills.filter(b => !b.paid).map(bill => (
                 <div key={bill.id} className="card" style={{ display: 'flex', alignItems: 'center', gap: '12px', borderLeft: `4px solid #FF9500` }}>
-                  <div style={{ flex: 1 }}>
-                    <p style={{ fontWeight: 600 }}>{bill.title}</p>
-                    <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Échéance: {bill.due_date}</p>
-                  </div>
+                  <div style={{ flex: 1 }}><p style={{ fontWeight: 600 }}>{bill.title}</p><p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Échéance: {bill.due_date}</p></div>
                   <div style={{ textAlign: 'right' }}>
                     <p style={{ fontWeight: 700 }}>{bill.amount.toLocaleString()} DA</p>
                     <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
@@ -872,10 +1022,7 @@ export default function App() {
               <h3 style={{ fontSize: '16px', color: 'var(--text-secondary)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '1px' }}>Réglées</h3>
               {bills.filter(b => b.paid).map(bill => (
                 <div key={bill.id} className="card" style={{ display: 'flex', alignItems: 'center', gap: '12px', borderLeft: `4px solid #34C759` }}>
-                  <div style={{ flex: 1 }}>
-                    <p style={{ fontWeight: 600 }}>{bill.title}</p>
-                    <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Payé</p>
-                  </div>
+                  <div style={{ flex: 1 }}><p style={{ fontWeight: 600 }}>{bill.title}</p><p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Payé</p></div>
                   <div style={{ textAlign: 'right' }}>
                     <p style={{ fontWeight: 700 }}>{bill.amount.toLocaleString()} DA</p>
                     <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
@@ -889,8 +1036,7 @@ export default function App() {
           </div>
         );
 
-      default:
-        return null;
+      default: return null;
     }
   };
 
@@ -898,9 +1044,7 @@ export default function App() {
     <div className="app-container">
       {renderContent()}
       <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} onAddClick={() => setIsModalOpen(true)} />
-      <AnimatePresence>
-        {isModalOpen && <AddModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onAdd={addExpense} />}
-      </AnimatePresence>
+      <AnimatePresence>{isModalOpen && <AddModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onAdd={addExpense} />}</AnimatePresence>
     </div>
   );
 }
