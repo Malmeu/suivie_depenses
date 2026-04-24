@@ -86,12 +86,13 @@ function LoginPage({ onLogin }) {
         initial={{ y: 50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         style={{ 
-          background: 'rgba(255, 255, 255, 0.85)', 
-          backdropFilter: 'blur(20px)',
+          background: 'rgba(255, 255, 255, 0.4)', 
+          backdropFilter: 'blur(25px)',
           padding: '30px',
           borderRadius: '30px',
           boxShadow: 'var(--shadow-lg)',
-          marginBottom: '40px'
+          marginBottom: '40px',
+          border: '1px solid rgba(255, 255, 255, 0.3)'
         }}
       >
         <div style={{ textAlign: 'center', marginBottom: '30px' }}>
@@ -108,7 +109,7 @@ function LoginPage({ onLogin }) {
                 placeholder="Email" 
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                style={{ width: '100%', padding: '14px 14px 14px 40px', borderRadius: '12px', border: '1px solid #E5E5EA', outline: 'none', background: 'white' }}
+                style={{ width: '100%', padding: '14px 14px 14px 40px', borderRadius: '12px', border: '1px solid rgba(0,0,0,0.1)', outline: 'none', background: 'rgba(255,255,255,0.5)' }}
                 required
               />
             </div>
@@ -121,7 +122,7 @@ function LoginPage({ onLogin }) {
                 placeholder="Mot de passe" 
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                style={{ width: '100%', padding: '14px 14px 14px 40px', borderRadius: '12px', border: '1px solid #E5E5EA', outline: 'none', background: 'white' }}
+                style={{ width: '100%', padding: '14px 14px 14px 40px', borderRadius: '12px', border: '1px solid rgba(0,0,0,0.1)', outline: 'none', background: 'rgba(255,255,255,0.5)' }}
                 required
               />
             </div>
