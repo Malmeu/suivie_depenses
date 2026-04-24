@@ -86,43 +86,43 @@ function LoginPage({ onLogin }) {
         initial={{ y: 50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         style={{ 
-          background: 'rgba(255, 255, 255, 0.4)', 
-          backdropFilter: 'blur(25px)',
+          background: 'rgba(255, 255, 255, 0.15)', 
+          backdropFilter: 'blur(20px)',
           padding: '30px',
           borderRadius: '30px',
           boxShadow: 'var(--shadow-lg)',
           marginBottom: '40px',
-          border: '1px solid rgba(255, 255, 255, 0.3)'
+          border: '1px solid rgba(255, 255, 255, 0.2)'
         }}
       >
         <div style={{ textAlign: 'center', marginBottom: '30px' }}>
           <h2 style={{ fontSize: '28px', color: '#1C1C1E' }}>Bienvenue</h2>
-          <p style={{ color: 'var(--text-secondary)' }}>Connectez-vous à votre foyer</p>
+          <p style={{ color: 'var(--text-main)', fontWeight: 500 }}>Connectez-vous à votre foyer</p>
         </div>
 
         <form onSubmit={handleLogin}>
           <div style={{ marginBottom: '16px' }}>
             <div style={{ position: 'relative' }}>
-              <Mail size={18} style={{ position: 'absolute', left: '12px', top: '15px', color: 'var(--text-secondary)' }} />
+              <Mail size={18} style={{ position: 'absolute', left: '12px', top: '15px', color: '#1C1C1E' }} />
               <input 
                 type="email" 
                 placeholder="Email" 
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                style={{ width: '100%', padding: '14px 14px 14px 40px', borderRadius: '12px', border: '1px solid rgba(0,0,0,0.1)', outline: 'none', background: 'rgba(255,255,255,0.5)' }}
+                style={{ width: '100%', padding: '14px 14px 14px 40px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.3)', outline: 'none', background: 'rgba(255,255,255,0.2)', color: '#1C1C1E' }}
                 required
               />
             </div>
           </div>
           <div style={{ marginBottom: '24px' }}>
             <div style={{ position: 'relative' }}>
-              <Lock size={18} style={{ position: 'absolute', left: '12px', top: '15px', color: 'var(--text-secondary)' }} />
+              <Lock size={18} style={{ position: 'absolute', left: '12px', top: '15px', color: '#1C1C1E' }} />
               <input 
                 type="password" 
                 placeholder="Mot de passe" 
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                style={{ width: '100%', padding: '14px 14px 14px 40px', borderRadius: '12px', border: '1px solid rgba(0,0,0,0.1)', outline: 'none', background: 'rgba(255,255,255,0.5)' }}
+                style={{ width: '100%', padding: '14px 14px 14px 40px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.3)', outline: 'none', background: 'rgba(255,255,255,0.2)', color: '#1C1C1E' }}
                 required
               />
             </div>
