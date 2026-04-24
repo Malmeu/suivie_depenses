@@ -141,6 +141,123 @@ function LoginPage({ onLogin }) {
   );
 }
 
+function BottomNav({ activeTab, setActiveTab, onAddClick }) {
+  const tabs = [
+    { id: 'home', icon: Home, label: 'Accueil' },
+    { id: 'history', icon: History, label: 'Historique' },
+    { id: 'add', icon: Plus, label: '', isFab: true },
+    { id: 'savings', icon: PiggyBank, label: 'Tirelire' },
+    { id: 'reminders', icon: Bell, label: 'Rappels' },
+  ];
+
+  return (
+    <nav className="bottom-nav glass">
+      {tabs.map((tab) => (
+        <div 
+          key={tab.id} 
+          className={`nav-item ${activeTab === tab.id ? 'active' : ''}`}
+          onClick={() => tab.id === 'add' ? onAddClick() : setActiveTab(tab.id)}
+        >
+          {tab.isFab ? (
+            <div className="fab">
+              <Plus size={28} />
+            </div>
+          ) : (
+            <>
+              <tab.icon size={24} strokeWidth={activeTab === tab.id ? 2.5 : 2} />
+              <span>{tab.label}</span>
+            </>
+          )}
+        </div>
+      ))}
+    </nav>
+  );
+}
+
+function SummaryCard({ total, income, expense, selectedMonth }) {
+  const monthLabel = format(selectedMonth, 'MMMM yyyy', { locale: fr });
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="card" 
+      style={{ 
+        background: 'linear-gradient(135deg, #D89A5B 0%, #B77A3F 100%)', 
+        color: 'white',
+        boxShadow: '0 10px 30px rgba(216, 154, 91, 0.3)',
+        position: 'relative',
+        overflow: 'hidden'
+      }}
+    >
+      <div style={{ position: 'absolute', right: '-20px', top: '-20px', opacity: 0.1 }}>
+        <Wallet size={120} />
+      </div>
+
+      <div>
+        <p style={{ opacity: 0.8, fontSize: '14px', fontWeight: 500, textTransform: 'capitalize' }}>{monthLabel}</p>
+        <h1 style={{ fontSize: '32px', marginTop: '4px' }}>{total.toLocaleString()} DA</h1>
+      </div>
+      
+      <div style={{ display: 'flex', gap: '30px', marginTop: '24px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ background: 'rgba(255,255,255,0.2)', padding: '6px', borderRadius: '8px' }}>
+            <TrendingUp size={16} />
+          </div>
+          <div>
+            <p style={{ opacity: 0.7, fontSize: '11px' }}>Entrées</p>
+            <p style={{ fontWeight: 600, fontSize: '14px' }}>+{income.toLocaleString()} DA</p>
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ background: 'rgba(255,255,255,0.2)', padding: '6px', borderRadius: '8px' }}>
+            <TrendingDown size={16} />
+          </div>
+          <div>
+            <p style={{ opacity: 0.7, fontSize: '11px' }}>Sorties</p>
+            <p style={{ fontWeight: 600, fontSize: '14px' }}>-{expense.toLocaleString()} DA</p>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+const MonthSelector = ({ selected, onSelect }) => {
+  const months = useMemo(() => {
+    const end = new Date();
+    const start = subMonths(end, 5);
+    return eachMonthOfInterval({ start, end }).reverse();
+  }, []);
+
+  return (
+    <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', padding: '10px 0', marginBottom: '16px', scrollbarWidth: 'none' }}>
+      {months.map(m => {
+        const active = getMonth(m) === getMonth(selected) && getYear(m) === getYear(selected);
+        return (
+          <div 
+            key={m.toISOString()}
+            onClick={() => onSelect(m)}
+            style={{ 
+              padding: '10px 20px', 
+              borderRadius: '20px', 
+              background: active ? 'var(--accent-blue)' : 'white',
+              color: active ? 'white' : 'var(--text-secondary)',
+              whiteSpace: 'nowrap',
+              fontWeight: 600,
+              fontSize: '14px',
+              boxShadow: active ? '0 4px 12px rgba(216, 154, 91, 0.3)' : 'var(--shadow-sm)',
+              cursor: 'pointer'
+            }}
+          >
+            {format(m, 'MMMM', { locale: fr })}
+          </div>
+        )
+      })}
+    </div>
+  );
+}
+
 const ExpenseItem = ({ item, onDelete }) => {
   const cat = CATEGORIES.find(c => c.id === item.category) || CATEGORIES[5];
   const Icon = cat.icon;
@@ -283,7 +400,7 @@ const TirelireView = ({ savings, onUpdate }) => {
                 <p style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
                   Manque: {Math.max(0, savings.goal - savings.current).toLocaleString()} DA
                 </p>
-                <p style={{ fontSize: '13px', fontWeight: 700, color: 'var(--accent-blue)' }}>{Math.round(progress)}%</p>
+                <p style={{ fontSize: '13px', fontWeight: 700, color: 'var(--accent-blue)' }}>{savings.goal > 0 ? Math.round(progress) : 0}%</p>
               </div>
             </div>
           </div>
@@ -536,8 +653,18 @@ export default function App() {
     const today = new Date();
     const dueSoon = billList.filter(b => !b.paid && (isToday(parseISO(b.due_date)) || isBefore(parseISO(b.due_date), today)));
     if (dueSoon.length > 0) {
-      const msgs = dueSoon.map(b => `${b.title} (${b.amount} DA) est dû le ${b.due_date}`);
+      const msgs = dueSoon.map(b => `${b.title} (${b.amount.toLocaleString()} DA)`);
       setNotifications(msgs);
+      
+      // Browser Notification if supported and permitted
+      if ("Notification" in window && Notification.permission === "granted") {
+        new Notification("Rappel de facture", {
+          body: `Vous avez ${dueSoon.length} facture(s) en attente today !`,
+          icon: "/favicon.svg"
+        });
+      } else if ("Notification" in window && Notification.permission === "default") {
+        Notification.requestPermission();
+      }
     }
   };
 
@@ -659,13 +786,23 @@ export default function App() {
         return (
           <div className="animate-slide-up" style={{ padding: '0 20px' }}>
             {notifications.length > 0 && (
-              <div style={{ background: '#FFF3E0', padding: '15px', borderRadius: '15px', marginBottom: '20px', borderLeft: '4px solid var(--accent-orange)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-                  <AlertCircle size={18} color="var(--accent-orange)" />
-                  <p style={{ fontWeight: 700, fontSize: '14px', color: '#D84315' }}>Attention : Rappels en attente</p>
+              <div className="glass" style={{ background: 'rgba(216, 154, 91, 0.1)', padding: '20px', borderRadius: '20px', marginBottom: '24px', border: '1px solid var(--accent-blue)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '10px' }}>
+                  <div style={{ background: 'var(--accent-blue)', color: 'white', padding: '6px', borderRadius: '50%' }}>
+                    <Bell size={18} />
+                  </div>
+                  <h4 style={{ fontWeight: 700, fontSize: '16px' }}>Factures à régler</h4>
                 </div>
-                {notifications.map((n, i) => <p key={i} style={{ fontSize: '12px', marginBottom: '4px' }}>• {n}</p>)}
-                <button onClick={() => setNotifications([])} style={{ fontSize: '11px', color: 'var(--accent-orange)', fontWeight: 600, marginTop: '5px' }}>Tout masquer</button>
+                {notifications.map((n, i) => (
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '14px' }}>
+                    <p>• {n}</p>
+                    <button 
+                      onClick={() => setActiveTab('reminders')}
+                      style={{ background: 'transparent', color: 'var(--accent-blue)', fontWeight: 600, fontSize: '12px' }}
+                    >Voir</button>
+                  </div>
+                ))}
+                <button onClick={() => setNotifications([])} style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '10px' }}>Masquer tout</button>
               </div>
             )}
 
