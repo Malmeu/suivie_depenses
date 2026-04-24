@@ -1,0 +1,155 @@
+:root {
+  --primary: #5E5CE6;
+  --bg-color: #F2F2F7;
+  --card-bg: #FFFFFF;
+  --text-main: #1C1C1E;
+  --text-secondary: #8E8E93;
+  --sep-color: #C6C6C8;
+  
+  /* Pasteis Colors */
+  --pastel-blue: #E1F5FE;
+  --pastel-green: #E8F5E9;
+  --pastel-red: #FFEBEE;
+  --pastel-orange: #FFF3E0;
+  --pastel-purple: #F3E5F5;
+
+  /* Accent Colors */
+  --accent-blue: #007AFF;
+  --accent-green: #34C759;
+  --accent-red: #FF3B30;
+  --accent-orange: #FF9500;
+  
+  --radius-xl: 30px;
+  --radius-lg: 20px;
+  --radius-md: 12px;
+  
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.05);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.12);
+  
+  --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-family: var(--font-family);
+  background-color: var(--bg-color);
+  color: var(--text-main);
+  line-height: 1.5;
+  overflow-x: hidden;
+  user-select: none;
+}
+
+#root {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-container {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 150px; /* Space for bottom nav + extra for inputs */
+  padding-top: 20px;
+  -webkit-overflow-scrolling: touch;
+}
+
+h1, h2, h3 {
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+
+.glass {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.card {
+  background: var(--card-bg);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 16px;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+
+button:active {
+  transform: scale(0.96);
+}
+
+.btn-primary {
+  background: var(--accent-blue);
+  color: white;
+  padding: 12px 24px;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+}
+
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 85px;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding-bottom: 25px; /* Safe area for iOS */
+  z-index: 100;
+}
+
+.nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: var(--text-secondary);
+  font-size: 10px;
+  text-decoration: none;
+  gap: 4px;
+}
+
+.nav-item.active {
+  color: var(--accent-blue);
+}
+
+.fab {
+  width: 56px;
+  height: 56px;
+  background: var(--accent-blue);
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: white;
+  box-shadow: 0 4px 15px rgba(0, 122, 255, 0.4);
+  margin-top: -40px;
+}
+
+/* Animations */
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Utils */
+.text-secondary { color: var(--text-secondary); }
+.text-bold { font-weight: 700; }
+.price-tag { font-family: 'SF Mono', monospace; font-weight: 600; }
