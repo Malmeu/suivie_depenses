@@ -1,20 +1,20 @@
 :root {
-  --primary: #5E5CE6;
-  --bg-color: #F2F2F7;
+  --primary: #D89A5B;
+  --bg-color: #F8F5F2;
   --card-bg: #FFFFFF;
-  --text-main: #1C1C1E;
-  --text-secondary: #8E8E93;
-  --sep-color: #C6C6C8;
+  --text-main: #2D241E;
+  --text-secondary: #8E847E;
+  --sep-color: #E5E0DA;
   
   /* Pasteis Colors */
-  --pastel-blue: #E1F5FE;
+  --pastel-blue: #FDF4E9;
   --pastel-green: #E8F5E9;
   --pastel-red: #FFEBEE;
   --pastel-orange: #FFF3E0;
   --pastel-purple: #F3E5F5;
 
   /* Accent Colors */
-  --accent-blue: #007AFF;
+  --accent-blue: #D89A5B;
   --accent-green: #34C759;
   --accent-red: #FF3B30;
   --accent-orange: #FF9500;

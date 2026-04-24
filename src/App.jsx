@@ -26,7 +26,9 @@ import {
   Lock,
   Mail,
   User,
-  LogOut
+  LogOut,
+  Trash2,
+  AlertCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -39,7 +41,10 @@ import {
   eachMonthOfInterval, 
   subMonths,
   getMonth,
-  getYear
+  getYear,
+  isToday,
+  isBefore,
+  addDays
 } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { supabase } from './supabaseClient';
@@ -49,7 +54,7 @@ const CATEGORIES = [
   { id: 'food', name: 'Alimentation', icon: Utensils, color: '#FF9500', bg: '#FFF3E0' },
   { id: 'shopping', name: 'Shopping', icon: ShoppingBag, color: '#AF52DE', bg: '#F3E5F5' },
   { id: 'transport', name: 'Transport', icon: Car, color: '#5AC8FA', bg: '#E1F5FE' },
-  { id: 'home', name: 'Logement', icon: HomeIcon, color: '#34C759', bg: '#E8F5E9' },
+  { id: 'home', name: 'Logement', icon: HomeIcon, color: '#D89A5B', bg: '#FDF4E9' },
   { id: 'bills', name: 'Factures', icon: Smartphone, color: '#007AFF', bg: '#E1F5FE' },
   { id: 'other', name: 'Autre', icon: Tag, color: '#8E8E93', bg: '#F2F2F7' },
 ];
@@ -96,33 +101,33 @@ function LoginPage({ onLogin }) {
         }}
       >
         <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-          <h2 style={{ fontSize: '28px', color: '#1C1C1E' }}>Bienvenue</h2>
-          <p style={{ color: 'var(--text-main)', fontWeight: 500 }}>Connectez-vous à votre foyer</p>
+          <h2 style={{ fontSize: '28px', color: '#2D241E' }}>Bienvenue</h2>
+          <p style={{ color: '#2D241E', fontWeight: 500 }}>Connectez-vous à votre foyer</p>
         </div>
 
         <form onSubmit={handleLogin}>
           <div style={{ marginBottom: '16px' }}>
             <div style={{ position: 'relative' }}>
-              <Mail size={18} style={{ position: 'absolute', left: '12px', top: '15px', color: '#1C1C1E' }} />
+              <Mail size={18} style={{ position: 'absolute', left: '12px', top: '15px', color: '#2D241E' }} />
               <input 
                 type="email" 
                 placeholder="Email" 
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                style={{ width: '100%', padding: '14px 14px 14px 40px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.3)', outline: 'none', background: 'rgba(255,255,255,0.2)', color: '#1C1C1E' }}
+                style={{ width: '100%', padding: '14px 14px 14px 40px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.3)', outline: 'none', background: 'rgba(255,255,255,0.2)', color: '#2D241E' }}
                 required
               />
             </div>
           </div>
           <div style={{ marginBottom: '24px' }}>
             <div style={{ position: 'relative' }}>
-              <Lock size={18} style={{ position: 'absolute', left: '12px', top: '15px', color: '#1C1C1E' }} />
+              <Lock size={18} style={{ position: 'absolute', left: '12px', top: '15px', color: '#2D241E' }} />
               <input 
                 type="password" 
                 placeholder="Mot de passe" 
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                style={{ width: '100%', padding: '14px 14px 14px 40px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.3)', outline: 'none', background: 'rgba(255,255,255,0.2)', color: '#1C1C1E' }}
+                style={{ width: '100%', padding: '14px 14px 14px 40px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.3)', outline: 'none', background: 'rgba(255,255,255,0.2)', color: '#2D241E' }}
                 required
               />
             </div>
@@ -136,89 +141,7 @@ function LoginPage({ onLogin }) {
   );
 }
 
-function BottomNav({ activeTab, setActiveTab, onAddClick }) {
-  const tabs = [
-    { id: 'home', icon: Home, label: 'Accueil' },
-    { id: 'history', icon: History, label: 'Historique' },
-    { id: 'add', icon: Plus, label: '', isFab: true },
-    { id: 'savings', icon: PiggyBank, label: 'Tirelire' },
-    { id: 'reminders', icon: Bell, label: 'Rappels' },
-  ];
-
-  return (
-    <nav className="bottom-nav glass">
-      {tabs.map((tab) => (
-        <div 
-          key={tab.id} 
-          className={`nav-item ${activeTab === tab.id ? 'active' : ''}`}
-          onClick={() => tab.id === 'add' ? onAddClick() : setActiveTab(tab.id)}
-        >
-          {tab.isFab ? (
-            <div className="fab">
-              <Plus size={28} />
-            </div>
-          ) : (
-            <>
-              <tab.icon size={24} strokeWidth={activeTab === tab.id ? 2.5 : 2} />
-              <span>{tab.label}</span>
-            </>
-          )}
-        </div>
-      ))}
-    </nav>
-  );
-}
-
-function SummaryCard({ total, income, expense, selectedMonth }) {
-  const monthLabel = format(selectedMonth, 'MMMM yyyy', { locale: fr });
-
-  return (
-    <motion.div 
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="card" 
-      style={{ 
-        background: 'linear-gradient(135deg, #007AFF 0%, #5E5CE6 100%)', 
-        color: 'white',
-        boxShadow: '0 10px 30px rgba(94, 92, 230, 0.3)',
-        position: 'relative',
-        overflow: 'hidden'
-      }}
-    >
-      <div style={{ position: 'absolute', right: '-20px', top: '-20px', opacity: 0.1 }}>
-        <Wallet size={120} />
-      </div>
-
-      <div>
-        <p style={{ opacity: 0.8, fontSize: '14px', fontWeight: 500, textTransform: 'capitalize' }}>{monthLabel}</p>
-        <h1 style={{ fontSize: '32px', marginTop: '4px' }}>{total.toLocaleString()} DA</h1>
-      </div>
-      
-      <div style={{ display: 'flex', gap: '30px', marginTop: '24px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div style={{ background: 'rgba(255,255,255,0.2)', padding: '6px', borderRadius: '8px' }}>
-            <TrendingUp size={16} />
-          </div>
-          <div>
-            <p style={{ opacity: 0.7, fontSize: '11px' }}>Entrées</p>
-            <p style={{ fontWeight: 600, fontSize: '14px' }}>+{income.toLocaleString()} DA</p>
-          </div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div style={{ background: 'rgba(255,255,255,0.2)', padding: '6px', borderRadius: '8px' }}>
-            <TrendingDown size={16} />
-          </div>
-          <div>
-            <p style={{ opacity: 0.7, fontSize: '11px' }}>Sorties</p>
-            <p style={{ fontWeight: 600, fontSize: '14px' }}>-{expense.toLocaleString()} DA</p>
-          </div>
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
-const ExpenseItem = ({ item }) => {
+const ExpenseItem = ({ item, onDelete }) => {
   const cat = CATEGORIES.find(c => c.id === item.category) || CATEGORIES[5];
   const Icon = cat.icon;
   
@@ -248,53 +171,23 @@ const ExpenseItem = ({ item }) => {
           <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{format(parseISO(item.date), 'dd MMM', { locale: fr })}</p>
         </div>
       </div>
-      <div style={{ textAlign: 'right' }}>
-        <p style={{ 
-          fontWeight: 700, 
-          color: item.type === 'income' ? 'var(--accent-green)' : 'var(--text-main)' 
-        }}>
-          {item.type === 'income' ? '+' : '-'}{item.amount.toLocaleString()} DA
-        </p>
-        <p style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-          {format(parseISO(item.date), 'HH:mm')}
-        </p>
+      <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div>
+          <p style={{ 
+            fontWeight: 700, 
+            color: item.type === 'income' ? 'var(--accent-green)' : 'var(--text-main)' 
+          }}>
+            {item.type === 'income' ? '+' : '-'}{item.amount.toLocaleString()} DA
+          </p>
+        </div>
+        <button 
+          onClick={(e) => { e.stopPropagation(); onDelete(item.id); }}
+          style={{ background: '#FFEBEE', color: '#FF3B30', padding: '8px', borderRadius: '8px' }}
+        >
+          <Trash2 size={16} />
+        </button>
       </div>
     </motion.div>
-  );
-};
-
-const MonthSelector = ({ selected, onSelect }) => {
-  const months = useMemo(() => {
-    const end = new Date();
-    const start = subMonths(end, 5);
-    return eachMonthOfInterval({ start, end }).reverse();
-  }, []);
-
-  return (
-    <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', padding: '10px 0', marginBottom: '16px', scrollbarWidth: 'none' }}>
-      {months.map(m => {
-        const active = getMonth(m) === getMonth(selected) && getYear(m) === getYear(selected);
-        return (
-          <div 
-            key={m.toISOString()}
-            onClick={() => onSelect(m)}
-            style={{ 
-              padding: '10px 20px', 
-              borderRadius: '20px', 
-              background: active ? 'var(--accent-blue)' : 'white',
-              color: active ? 'white' : 'var(--text-secondary)',
-              whiteSpace: 'nowrap',
-              fontWeight: 600,
-              fontSize: '14px',
-              boxShadow: active ? '0 4px 12px rgba(0, 122, 255, 0.3)' : 'var(--shadow-sm)',
-              cursor: 'pointer'
-            }}
-          >
-            {format(m, 'MMMM', { locale: fr })}
-          </div>
-        )
-      })}
-    </div>
   );
 };
 
@@ -333,7 +226,7 @@ const TirelireView = ({ savings, onUpdate }) => {
               value={editTitle} 
               onChange={e => setEditTitle(e.target.value)}
               className="glass" 
-              style={{ width: '100%', padding: '12px', borderRadius: '10px', border: 'none', background: '#F2F2F7', outline: 'none' }}
+              style={{ width: '100%', padding: '12px', borderRadius: '10px', border: 'none', background: '#F8F5F2', outline: 'none' }}
             />
           </div>
           <div style={{ marginBottom: '20px' }}>
@@ -343,7 +236,7 @@ const TirelireView = ({ savings, onUpdate }) => {
               value={editGoal} 
               onChange={e => setEditGoal(e.target.value)}
               className="glass" 
-              style={{ width: '100%', padding: '12px', borderRadius: '10px', border: 'none', background: '#F2F2F7', outline: 'none' }}
+              style={{ width: '100%', padding: '12px', borderRadius: '10px', border: 'none', background: '#F8F5F2', outline: 'none' }}
             />
           </div>
           <button onClick={handleSaveSettings} className="btn-primary" style={{ width: '100%' }}>Enregistrer</button>
@@ -367,7 +260,7 @@ const TirelireView = ({ savings, onUpdate }) => {
             <div className="glass" style={{ 
               padding: '20px', 
               borderRadius: '20px', 
-              background: 'rgba(255,255,255,0.4)',
+              background: 'rgba(255,255,255,0.3)',
               backdropFilter: 'blur(10px)',
               WebkitBackdropFilter: 'blur(10px)',
               boxShadow: 'var(--shadow-md)',
@@ -396,7 +289,7 @@ const TirelireView = ({ savings, onUpdate }) => {
           </div>
 
           <div className="card" style={{ marginTop: '20px', padding: '20px' }}>
-            <p style={{ fontSize: '14px', fontWeight: 600, marginBottom: '12px' }}>Ajouter un montant personnalisé</p>
+            <p style={{ fontSize: '14px', fontWeight: 600, marginBottom: '12px' }}>Gérer mes économies</p>
             <div style={{ display: 'flex', gap: '10px' }}>
               <input 
                 type="number" 
@@ -409,7 +302,7 @@ const TirelireView = ({ savings, onUpdate }) => {
                 onClick={() => {
                   const val = parseFloat(customAmount);
                   if (val > 0) {
-                    onUpdate({ ...savings, current: savings.current + val });
+                    onUpdate({ ...savings, current: savings.current + val }, true);
                     setCustomAmount('');
                   }
                 }}
@@ -418,18 +311,21 @@ const TirelireView = ({ savings, onUpdate }) => {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '12px' }}>
                <button 
-                onClick={() => onUpdate({ ...savings, current: savings.current + 500 })}
+                onClick={() => onUpdate({ ...savings, current: savings.current + 500 }, true)}
                 style={{ padding: '12px', background: 'var(--pastel-blue)', color: 'var(--accent-blue)', borderRadius: '12px', fontWeight: 600 }}
               >+ 500 DA</button>
                <button 
                 onClick={() => {
                   const val = customAmount ? parseFloat(customAmount) : 500;
-                  onUpdate({ ...savings, current: Math.max(0, savings.current - val) });
+                  onUpdate({ ...savings, current: Math.max(0, savings.current - val) }, false);
                   if (customAmount) setCustomAmount('');
                 }}
                 style={{ padding: '12px', background: 'var(--pastel-red)', color: 'var(--accent-red)', borderRadius: '12px', fontWeight: 600 }}
               >{customAmount ? `- ${customAmount} DA` : '- 500 DA'}</button>
             </div>
+            <p style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '10px', textAlign: 'center' }}>
+              Note: Un dépôt retire la somme de votre solde principal.
+            </p>
           </div>
         </>
       )}
@@ -442,6 +338,8 @@ const AddModal = ({ isOpen, onClose, onAdd }) => {
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('food');
   const [type, setType] = useState('expense');
+  const [isReminder, setIsReminder] = useState(false);
+  const [dueDate, setDueDate] = useState(format(addDays(new Date(), 7), 'yyyy-MM-dd'));
 
   if (!isOpen) return null;
 
@@ -453,10 +351,13 @@ const AddModal = ({ isOpen, onClose, onAdd }) => {
       amount: parseFloat(amount),
       category,
       date: new Date().toISOString(),
-      type
+      type,
+      isReminder,
+      dueDate
     });
     setAmount('');
     setTitle('');
+    setIsReminder(false);
     onClose();
   };
 
@@ -479,7 +380,7 @@ const AddModal = ({ isOpen, onClose, onAdd }) => {
         <div style={{ width: '40px', height: '5px', background: '#E5E5EA', borderRadius: '10px', margin: '0 auto 20px' }} onClick={onClose}></div>
         <h2 style={{ marginBottom: '20px', textAlign: 'center' }}>Nouvelle Opération</h2>
         
-        <div style={{ display: 'flex', background: '#F2F2F7', borderRadius: '12px', padding: '4px', marginBottom: '20px' }}>
+        <div style={{ display: 'flex', background: '#F8F5F2', borderRadius: '12px', padding: '4px', marginBottom: '20px' }}>
           <button 
             onClick={() => setType('expense')}
             style={{ 
@@ -523,6 +424,32 @@ const AddModal = ({ isOpen, onClose, onAdd }) => {
             />
           </div>
 
+          <div style={{ marginBottom: '20px', background: '#F8F5F2', padding: '15px', borderRadius: '15px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Bell size={18} color="var(--accent-blue)" />
+                <p style={{ fontWeight: 600, fontSize: '14px' }}>Activer un rappel / facture</p>
+              </div>
+              <input 
+                type="checkbox" 
+                checked={isReminder} 
+                onChange={(e) => setIsReminder(e.target.checked)}
+                style={{ width: '20px', height: '20px', accentColor: 'var(--accent-blue)' }}
+              />
+            </div>
+            {isReminder && (
+              <div style={{ marginTop: '12px' }}>
+                <label style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Échéance</label>
+                <input 
+                  type="date" 
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
+                  style={{ width: '100%', padding: '10px', borderRadius: '10px', border: '1px solid #E5E5EA', marginTop: '4px', outline: 'none' }}
+                />
+              </div>
+            )}
+          </div>
+
           <div style={{ marginBottom: '24px' }}>
             <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '12px', display: 'block' }}>Catégorie</label>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
@@ -532,19 +459,19 @@ const AddModal = ({ isOpen, onClose, onAdd }) => {
                   onClick={() => setCategory(cat.id)}
                   style={{ 
                     padding: '12px', borderRadius: '15px', textAlign: 'center',
-                    background: category === cat.id ? cat.bg : '#F2F2F7',
+                    background: category === cat.id ? cat.bg : '#F8F5F2',
                     border: category === cat.id ? `1px solid ${cat.color}` : '1px solid transparent',
                     cursor: 'pointer'
                   }}
                 >
-                  <cat.icon size={20} style={{ color: category === cat.id ? cat.color : '#8E8E93', marginBottom: '4px' }} />
+                  <cat.icon size={20} style={{ color: category === cat.id ? cat.color : '#8E847E', marginBottom: '4px' }} />
                   <p style={{ fontSize: '10px', fontWeight: 600 }}>{cat.name}</p>
                 </div>
               ))}
             </div>
           </div>
 
-          <button type="submit" className="btn-primary" style={{ width: '100%', fontSize: '17px' }}>Ajouter</button>
+          <button type="submit" className="btn-primary" style={{ width: '100%', fontSize: '17px' }}>{isReminder ? 'Planifier le rappel' : 'Ajouter'}</button>
           <button type="button" onClick={onClose} style={{ width: '100%', padding: '16px', background: 'transparent', color: 'var(--text-secondary)', fontSize: '15px' }}>Annuler</button>
         </form>
       </motion.div>
@@ -565,6 +492,7 @@ export default function App() {
   const [savings, setSavings] = useState(INITIAL_SAVINGS);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
 
   // --- Auth & Sync ---
 
@@ -592,7 +520,10 @@ export default function App() {
 
       setExpenses(expData || []);
       setBills(billData || []);
-      if (saveData) setSavings(saveData);
+      if (saveData) {
+        setSavings(saveData);
+        checkDueBills(billData || []);
+      }
 
     } catch (e) {
       console.error(e);
@@ -601,26 +532,98 @@ export default function App() {
     }
   };
 
+  const checkDueBills = (billList) => {
+    const today = new Date();
+    const dueSoon = billList.filter(b => !b.paid && (isToday(parseISO(b.due_date)) || isBefore(parseISO(b.due_date), today)));
+    if (dueSoon.length > 0) {
+      const msgs = dueSoon.map(b => `${b.title} (${b.amount} DA) est dû le ${b.due_date}`);
+      setNotifications(msgs);
+    }
+  };
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
   };
 
-  const addExpense = async (newExp) => {
-    const { data, error } = await supabase.from('expenses').insert([newExp]).select();
-    if (!error && data) setExpenses([data[0], ...expenses]);
+  const addExpense = async (payload) => {
+    const { isReminder, dueDate, ...newExp } = payload;
+
+    if (isReminder) {
+      const { data, error } = await supabase.from('bills').insert([{
+        title: newExp.title,
+        amount: newExp.amount,
+        due_date: dueDate,
+        paid: false
+      }]).select();
+      if (!error && data) {
+        setBills([...bills, data[0]]);
+        alert("Rappel planifié !");
+      }
+    } else {
+      const { data, error } = await supabase.from('expenses').insert([newExp]).select();
+      if (!error && data) setExpenses([data[0], ...expenses]);
+    }
+  };
+
+  const deleteExpense = async (id) => {
+    const { error } = await supabase.from('expenses').delete().eq('id', id);
+    if (!error) {
+      setExpenses(expenses.filter(e => e.id !== id));
+    }
   };
 
   const toggleBill = async (id) => {
     const bill = bills.find(b => b.id === id);
     if (!bill) return;
-    const { data, error } = await supabase.from('bills').update({ paid: !bill.paid }).eq('id', id).select();
-    if (!error && data) setBills(bills.map(b => b.id === id ? data[0] : b));
+    
+    const isPaying = !bill.paid;
+    const { data, error } = await supabase.from('bills').update({ paid: isPaying }).eq('id', id).select();
+    
+    if (!error && data) {
+      setBills(bills.map(b => b.id === id ? data[0] : b));
+      
+      // If paying, add as expense
+      if (isPaying) {
+        const newExp = {
+          title: `Facture: ${bill.title}`,
+          amount: bill.amount,
+          category: 'bills',
+          date: new Date().toISOString(),
+          type: 'expense'
+        };
+        const { data: expData } = await supabase.from('expenses').insert([newExp]).select();
+        if (expData) setExpenses([expData[0], ...expenses]);
+      }
+    }
   };
 
-  const updateSavings = async (newSavings) => {
+  const updateSavings = async (newSavings, isDeposit) => {
     const { data, error } = await supabase.from('savings').update(newSavings).eq('id', 1).select();
-    if (!error && data) setSavings(data[0]);
+    if (!error && data) {
+      setSavings(data[0]);
+      
+      // If it was a deposit, it's an expense
+      if (isDeposit !== undefined) {
+        const diff = Math.abs(newSavings.current - savings.current);
+        if (diff > 0) {
+          const newExp = {
+            title: isDeposit ? "Dépôt Tirelire" : "Retrait Tirelire",
+            amount: diff,
+            category: 'other',
+            date: new Date().toISOString(),
+            type: isDeposit ? 'expense' : 'income'
+          };
+          const { data: expData } = await supabase.from('expenses').insert([newExp]).select();
+          if (expData) setExpenses([expData[0], ...expenses]);
+        }
+      }
+    }
   };
+
+  const deleteBill = async (id) => {
+     const { error } = await supabase.from('bills').delete().eq('id', id);
+     if (!error) setBills(bills.filter(b => b.id !== id));
+  }
 
   // --- Derived State ---
 
@@ -634,6 +637,7 @@ export default function App() {
   const stats = useMemo(() => {
     const income = filteredExpenses.filter(e => e.type === 'income').reduce((a, b) => a + b.amount, 0);
     const expense = filteredExpenses.filter(e => e.type === 'expense').reduce((a, b) => a + b.amount, 0);
+    // Solde = Income - Expense (Savings are already counted as expenses via updateSavings)
     return { income, expense, total: income - expense };
   }, [filteredExpenses]);
 
@@ -654,6 +658,17 @@ export default function App() {
       case 'home':
         return (
           <div className="animate-slide-up" style={{ padding: '0 20px' }}>
+            {notifications.length > 0 && (
+              <div style={{ background: '#FFF3E0', padding: '15px', borderRadius: '15px', marginBottom: '20px', borderLeft: '4px solid var(--accent-orange)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                  <AlertCircle size={18} color="var(--accent-orange)" />
+                  <p style={{ fontWeight: 700, fontSize: '14px', color: '#D84315' }}>Attention : Rappels en attente</p>
+                </div>
+                {notifications.map((n, i) => <p key={i} style={{ fontSize: '12px', marginBottom: '4px' }}>• {n}</p>)}
+                <button onClick={() => setNotifications([])} style={{ fontSize: '11px', color: 'var(--accent-orange)', fontWeight: 600, marginTop: '5px' }}>Tout masquer</button>
+              </div>
+            )}
+
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <div>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Balance Mensuelle</p>
@@ -672,7 +687,7 @@ export default function App() {
               <button onClick={() => setActiveTab('history')} style={{ background: 'transparent', color: 'var(--accent-blue)', fontWeight: 600, fontSize: '14px' }}>Historique</button>
             </div>
 
-            {filteredExpenses.slice(0, 5).map(exp => <ExpenseItem key={exp.id} item={exp} />)}
+            {filteredExpenses.slice(0, 5).map(exp => <ExpenseItem key={exp.id} item={exp} onDelete={deleteExpense} />)}
             {filteredExpenses.length === 0 && (
               <div style={{ textAlign: 'center', padding: '40px 0', opacity: 0.5 }}>
                 <Search size={48} style={{ marginBottom: '10px' }} />
@@ -686,7 +701,7 @@ export default function App() {
         return (
           <div className="animate-slide-up" style={{ padding: '0 20px' }}>
             <h2 style={{ fontSize: '24px', marginBottom: '20px' }}>Tout l'historique</h2>
-            {expenses.map(exp => <ExpenseItem key={exp.id} item={exp} />)}
+            {expenses.map(exp => <ExpenseItem key={exp.id} item={exp} onDelete={deleteExpense} />)}
           </div>
         );
 
@@ -697,7 +712,7 @@ export default function App() {
         return (
           <div className="animate-slide-up" style={{ padding: '0 20px' }}>
             <h2 style={{ fontSize: '24px', marginBottom: '8px' }}>Rappels Factures</h2>
-            <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '14px' }}>Ne ratez plus aucune échéance.</p>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '24px', fontSize: '14px' }}>Vos dépenses planifiées.</p>
             <div style={{ marginBottom: '24px' }}>
               <h3 style={{ fontSize: '16px', color: 'var(--text-secondary)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '1px' }}>À venir</h3>
               {bills.filter(b => !b.paid).map(bill => (
@@ -708,7 +723,10 @@ export default function App() {
                   </div>
                   <div style={{ textAlign: 'right' }}>
                     <p style={{ fontWeight: 700 }}>{bill.amount.toLocaleString()} DA</p>
-                    <button onClick={() => toggleBill(bill.id)} style={{ fontSize: '11px', marginTop: '4px', padding: '4px 8px', borderRadius: '8px', background: '#FFF3E0', color: '#FF9500' }}>À payer</button>
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                      <button onClick={() => toggleBill(bill.id)} style={{ fontSize: '11px', padding: '6px 10px', borderRadius: '8px', background: '#FFF3E0', color: '#FF9500', fontWeight: 600 }}>Payer</button>
+                      <button onClick={() => deleteBill(bill.id)} style={{ padding: '6px', borderRadius: '8px', background: '#FFEBEE', color: '#FF3B30' }}><Trash2 size={14}/></button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -723,7 +741,10 @@ export default function App() {
                   </div>
                   <div style={{ textAlign: 'right' }}>
                     <p style={{ fontWeight: 700 }}>{bill.amount.toLocaleString()} DA</p>
-                    <button onClick={() => toggleBill(bill.id)} style={{ fontSize: '11px', marginTop: '4px', padding: '4px 8px', borderRadius: '8px', background: '#E8F5E9', color: '#34C759' }}>Payé</button>
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                       <button onClick={() => toggleBill(bill.id)} style={{ fontSize: '11px', padding: '6px 10px', borderRadius: '8px', background: '#E8F5E9', color: '#34C759', fontWeight: 600 }}>Décocher</button>
+                       <button onClick={() => deleteBill(bill.id)} style={{ padding: '6px', borderRadius: '8px', background: '#FFEBEE', color: '#FF3B30' }}><Trash2 size={14}/></button>
+                    </div>
                   </div>
                 </div>
               ))}
